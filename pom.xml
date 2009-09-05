@@ -1,31 +1,27 @@
-
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <!-- ToDo uses cismet POM there should be an EIG POM-->
+
     <parent>
-        <groupId>de.cismet.maven</groupId>
-        <artifactId>cismetParent</artifactId>
+        <groupId>net.eig</groupId>
+        <artifactId>eig-parent</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
+
     <groupId>net.eig.ws.util</groupId>
-    <artifactId>WSSBean</artifactId>
-    <packaging>jar</packaging>
+    <artifactId>wss-bean</artifactId>
     <version>1.0-SNAPSHOT</version>
-    <name>WSSBean</name>
-    <url>http://www.eig.org</url>          
+    <packaging>jar</packaging>
+
+    <name>WSS Bean</name>
+    <description>!!! description pending !!!</description>
+
     <dependencies>
-        <dependency>
-            <groupId>org.apache.maven.surefire</groupId>
-            <artifactId>surefire-junit4</artifactId>
-            <version>2.4.3</version>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
             <version>1.2.8</version>
-            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>dom4j</groupId>
@@ -43,4 +39,8 @@
             <version>3.0.1</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <finalName>WSSBean</finalName>
+    </build>
 </project>
