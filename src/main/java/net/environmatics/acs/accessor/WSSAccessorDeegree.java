@@ -11,6 +11,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
+//import java.util.Random;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import net.environmatics.acs.accessor.interfaces.AuthenticationMethod;
@@ -43,7 +44,7 @@ import org.dom4j.io.SAXReader;
  * <b>Example:</b><code><br>
  *  // Creating new accessor instance
  *  WSSAccessorDeegree accessor = new WSSAccessorDeegree("http://myservices.com/wss");<br>
- *  <br>    
+ *  <br>
  *  // Choosing a authentication method<br>
  *  PasswordAuthenticationMethod authMethod = new PasswordAuthenticationMethod("user","pass");<br>
  *  <br>
@@ -54,7 +55,7 @@ import org.dom4j.io.SAXReader;
  *  // operation on a secured WMS<br>
  *  Payload response = accessor.doService("HTTP_GET", "SERVICE=WMS&REQUEST=GetCapabilities", "http://localhost:8080/facadeURL");<br>
  * </code>
- * 
+ *
  * @author abonitz
  */
 public class WSSAccessorDeegree implements WSSAccessor {
@@ -68,17 +69,21 @@ public class WSSAccessorDeegree implements WSSAccessor {
     private Document wssCapabilities;
     private boolean isCredentialProviderAvailable = false;
     ReadWriteLock lock = new ReentrantReadWriteLock();
+    //private int readLockCounter = 0;
     private SessionAuthenticationMethod currentAuth = null;
+    private boolean lastDoServiceFailed = false;
+    //TODO entfernen!!! nur zum testen
+    //private int testSessionTimeoutCounter = 0;
 
     /**
      * Creates a new instance of the WSSAccessorDeegree
-     * 
+     *
      * @param wssURL URL to a WSS
      */
     public WSSAccessorDeegree() {
         logger.debug("WSS AccessorDeegree()");
         client = new HttpClient(new MultiThreadedHttpConnectionManager());
-
+        
         this.wss_url = null;
         this.supportedAuthnMethods = null;
         this.sessionInfo = null;
@@ -87,7 +92,7 @@ public class WSSAccessorDeegree implements WSSAccessor {
 
     /**
      * Creates a new instance of the WSSAccessorDeegree
-     * 
+     *
      * @param wssURL URL to a WSS
      */
     public WSSAccessorDeegree(String wssURL) {
@@ -98,10 +103,10 @@ public class WSSAccessorDeegree implements WSSAccessor {
 
     /**
      * Creates a new instance of the WSSAccessorDeegree
-     * 
+     *
      * @param wssURL URL to a WSS
      * @param proxyURL URL to a proxy server
-     * @param port The port of the proxy server 
+     * @param port The port of the proxy server
      */
     public WSSAccessorDeegree(String wssURL, String proxyURL, int port) {
         this(wssURL);
@@ -111,8 +116,8 @@ public class WSSAccessorDeegree implements WSSAccessor {
 
     /**
      * Performs a doService request on the selected WSS.
-     * 
-     * @param dcp_type <b>Must</b> be 
+     *
+     * @param dcp_type <b>Must</b> be
      *      {@link net.environmatics.acs.accessor.interfaces.WSSAccessor#DCP_HTTP_GET HTTP GET} or
      *      {@link net.environmatics.acs.accessor.interfaces.WSSAccessor#DCP_HTTP_POST HTTP POST}
      * @param serviceRequest Request to a secured service
@@ -121,14 +126,19 @@ public class WSSAccessorDeegree implements WSSAccessor {
      * @return Payload, containing the doService response.
      * @throws ServiceException Thrown in case of an error.
      */
-    public Payload doService(String dcp_type, String serviceRequest, NameValuePair[] requestParams, String facadeURL) throws ServiceException {
+    public synchronized Payload doService(final String dcp_type, final String serviceRequest, final NameValuePair[] requestParams, final String facadeURL) throws ServiceException {
         logger.debug("service request: " + serviceRequest + " facade url: " + facadeURL);
         if (wss_url == null) {
             throw new NullPointerException("wss_url is not initialized");
         }
 
         try {
-            //TODO Achtung schauen ob get überhaupt funktioniert 
+            if (currentAuth == null) {
+                logger.debug("not yet authed => call newSession()");
+                newSession();
+            }
+
+            //TODO Achtung schauen ob get überhaupt funktioniert
             String postMethod = wss_url;
             if (dcp_type.equals(DCP_HTTP_GET)) {
                 postMethod = postMethod + "?";
@@ -137,85 +147,146 @@ public class WSSAccessorDeegree implements WSSAccessor {
             if (isCredentialProviderAvailable) {
                 post.setDoAuthentication(true);
             }
-            // TODO: This shalt be changed by session if applicable 
-            //compability change for Wuppertal at the moment there is no username/password access therefore every request 
-            //gets a new session id
-            //first close the
-            logger.fatal("Wuppertal Kompatibilitätsmodus --> Immer neue Session bei jedem Request");
 
+            Payload doServiceResponse = null;
+            //int readlockID = new Random().nextInt();
+            try {
+//                logger.debug("deadlock:read lock: "+readlockID+" counter: " + readLockCounter);
+//                lock.readLock().lock();
+//                readLockCounter++;
+//                logger.debug("deadlock:read lock done"+readlockID+" counter: " +readLockCounter);
 
-            if (lock.writeLock().tryLock()) {
-                try {
-                    closeSession();
-                    SessionInformation sInfo = null;
-                    try {
-                        sInfo = getSession(authnMethod);
-                    } catch (AuthenticationFailedException ex) {
-                        logger.error("Authentication failed couldn't aquire session id: ", ex);
-                        lock.readLock().unlock();
-                        throw new ServiceException(ex);
+                //TODO entfernen!!! nur zum testen!
+//                if (testSessionTimeoutCounter++ >= 5) {
+//                    testSessionTimeoutCounter = 0;
+//                    SessionInformation sesInfo = new SessionInformation() {
+//
+//                        @Override
+//                        public String getSessionID() {
+//                            return "ID0000-0.000000000000000";
+//                        }
+//                    };
+//                currentAuth = new SessionAuthenticationMethod(sesInfo);
+//                } //TODO entfernen!!! nur zum testen!
+
+                String wssRequest = serviceRequest + "&sessionID=" + currentAuth.getSessionID();
+                logger.debug("WSS request: " + wssRequest.toString());
+                Document request = DOMHelper.generateDoService(dcp_type, wssRequest, currentAuth, requestParams, facadeURL);
+
+                post.setRequestEntity(new StringRequestEntity(request.asXML(), "text/xml", "UTF-8"));
+                logger.debug("sending WSS request: " + request.asXML());
+                client.executeMethod(post);
+                logger.debug("getResponseBody: " + post.getResponseBody().toString());
+
+                //post.getResponseBodyAsString();
+                logger.debug("ResponseCharset: " + post.getResponseCharSet());
+                logger.debug("ContentLength: " + post.getResponseContentLength());
+                logger.debug("getStatusCode: " + post.getStatusCode());
+
+                Header[] header = post.getResponseHeaders();
+                if (header != null) {
+                    for (Header current : header) {
+                        logger.debug("Response Header: " + current.getName() + " value: " + current.getValue());
                     }
-                    currentAuth = new SessionAuthenticationMethod(sInfo);
-                } catch (Exception ex) {
-                    logger.warn("Failure while closing session", ex);
-
-                } finally {
-                    lock.readLock().lock();
-                    lock.writeLock().unlock();
                 }
-            } else {
-                lock.readLock().lock();
-                logger.debug("couldn't aquire writelock --> somebody is using the session aquire readlock (session not closed)");
-            }
-            //ToDo            
-            serviceRequest+="&sessionID="+currentAuth.getSessionID();
-            logger.debug("WSS request: "+serviceRequest.toString());
-            Document request = DOMHelper.generateDoService(dcp_type, serviceRequest, currentAuth, requestParams, facadeURL);
-
-            post.setRequestEntity(new StringRequestEntity(request.asXML(), "text/xml", "UTF-8"));
-            logger.debug("sending WSS request: " + request.asXML());    
-            client.executeMethod(post);
-
-            //post.getResponseBodyAsString();
-            logger.debug("ResponseCharset" + post.getResponseCharSet());
-            logger.debug("ContentLength" + post.getResponseContentLength());
-
-            Header[] header = post.getResponseHeaders();
-            if (header != null) {
-                for (Header current : header) {
-                    logger.debug("Response Header: " + current.getName() + " value: " + current.getValue());
+                Header[] footer = post.getResponseFooters();
+                if (footer != null) {
+                    for (Header current : footer) {
+                        logger.debug("Response footer: " + current.getName() + " value: " + current.getValue());
+                    }
                 }
-            }
-            Header[] footer = post.getResponseFooters();
-            if (footer != null) {
-                for (Header current : footer) {
-                    logger.debug("Response footer: " + current.getName() + " value: " + current.getValue());
+
+
+                //post.getResponseBody();
+                logger.debug("Befor Payload object creation");
+                doServiceResponse = new Payload(post.getResponseBody(), post.getResponseCharSet());
+                logger.debug("After Payload object creation");
+
+                if (doServiceResponse.containsException()) {
+                    if (!lastDoServiceFailed) {
+                        logger.debug("doRequest failed first time => call newSession() and try again.");
+                        newSession();
+                        lastDoServiceFailed = true;
+                        return doService(dcp_type, serviceRequest, requestParams, facadeURL);
+                    } else {
+                        logger.debug("doRequest failed second time in a row => give up (throw Exception).");
+                        lastDoServiceFailed = false;
+                        throw new ServiceException(doServiceResponse.asText());
+                    }
+                } else {
+                    logger.debug("doRequest not failed.");
+                    lastDoServiceFailed = false;
                 }
+
+                logger.debug(doServiceResponse.asText());
+                return doServiceResponse;
+
+            } catch (IOException rethrow) {
+                logger.error("Error in doService(). Exception: " + rethrow);
+                throw rethrow;
+//            } finally {
+//                logger.debug("deadlock:read unlock: "+readlockID+" counter: " + readLockCounter);
+//                readLockCounter--;
+//                lock.readLock().unlock();
+//                logger.debug("deadlock:read unlock done"+readlockID+" counter: " +readLockCounter);
             }
 
-            //post.getResponseBody();
-            logger.debug("Befor Payload object creation");
-            Payload doServiceResponse = new Payload(post.getResponseBody(), post.getResponseCharSet());
-            logger.debug("After Payload object creation");
-            lock.readLock().unlock();
-            if (doServiceResponse.containsException()) {
-                throw new ServiceException(doServiceResponse.asText());
-            }
-
-            return doServiceResponse;
 
         } catch (IOException ex) {
             logger.error("Could not perform doService(). Exception: " + ex);
-            lock.readLock().unlock();
             throw new ServiceException(ex);
+//        } finally {
+//            logger.debug("deadlock:read unlock" + readLockCounter);
+//            readLockCounter--;
+//            lock.readLock().unlock();
+//            logger.debug("deadlock:read unlock done" + readLockCounter);
         }
     }
 
     /**
-     * Performs a doService request on the selected WSS. Note that this method 
+     * Starts a new session with the authentication metod that was set before.
+     * This method is first trying to close the current session
+     *
+     * @throws ServiceException Thrown in case of an error.
+     */
+    private synchronized void newSession() throws ServiceException {
+        logger.debug("newSession()");
+
+//        try {
+//            logger.debug("deadlock:write lock" + readLockCounter);
+//            lock.writeLock().lock();
+//            logger.debug("deadlock:write lock done" + readLockCounter);
+            try {
+                logger.debug("first close current session");
+                closeSession();
+            } catch (ServiceException ex) {
+                logger.warn("Failure while closing session", ex);
+            }
+            try {
+                logger.debug("authenticate => calling getSession(authnMethod)");
+                SessionInformation sInfo = getSession(authnMethod);
+                currentAuth = new SessionAuthenticationMethod(sInfo);
+            } catch (AuthenticationFailedException ex) {
+                currentAuth = null;
+                logger.error("Authentication failed couldn't aquire session id: ", ex);
+                throw new ServiceException(ex);
+//            } finally {
+//            logger.debug("deadlock:write unlock" + readLockCounter);
+//            lock.writeLock().unlock();
+//            logger.debug("deadlock:write unlock done" + readLockCounter);
+            }
+//        } finally {
+//            logger.debug("deadlock:write unlock" + readLockCounter);
+//            lock.writeLock().unlock();
+//            logger.debug("deadlock:write unlock done" + readLockCounter);
+//        }
+    }
+
+    /**
+     * Performs a doService request on the selected WSS. Note that this method
      * sets the WSS doService request parameters to "HTTP_Header" with "Mime-Type: text/xml"
-     * 
-     * @param dcp_type <b>Must</b> be 
+     *
+     * @param dcp_type <b>Must</b> be
      *      {@link net.environmatics.acs.accessor.interfaces.WSSAccessor#DCP_HTTP_GET HTTP GET} or
      *      {@link net.environmatics.acs.accessor.interfaces.WSSAccessor#DCP_HTTP_POST HTTP POST}
      * @param serviceRequest Request to a secured service
@@ -234,7 +305,7 @@ public class WSSAccessorDeegree implements WSSAccessor {
 
     /**
      * Establishes a session between the WSSAccessor and the remote WSS service.
-     * 
+     *
      * @param authnMethod The authentication method which should be used
      * @throws AuthenticationFailedException Is thrown, when the authentication fails
      */
@@ -273,8 +344,8 @@ public class WSSAccessorDeegree implements WSSAccessor {
 
             sessionInfo = new SessionInformationDeegree(getSessionResponse);
             logger.info("New Session with SessionID=" + sessionInfo.getSessionID() +" length: "+sessionInfo.getSessionID().length());
-            
-            if(sessionInfo.getSessionID() == null || sessionInfo.getSessionID().length() == 0 || sessionInfo.getSessionID().length() == 2){                
+
+            if(sessionInfo.getSessionID() == null || sessionInfo.getSessionID().length() == 0 || sessionInfo.getSessionID().length() == 2){
                 throw new AuthenticationFailedException("SessionID is null or equals  \"\"");
             }
             return sessionInfo;
@@ -284,11 +355,11 @@ public class WSSAccessorDeegree implements WSSAccessor {
             throw new AuthenticationFailedException(ioex);
         }
     }
-    
-    
-     /**
+
+
+    /**
      * Establishes a session between the WSSAccessor and the remote WSS service.
-     * 
+     *
      * @param authnMethod The authentication method which should be used
      * @throws AuthenticationFailedException Is thrown, when the authentication fails
      */
@@ -328,8 +399,8 @@ public class WSSAccessorDeegree implements WSSAccessor {
 
             SessionInformation tmpSI = new SessionInformationDeegree(getSessionResponse);
             logger.info("New Session with SessionID=" + tmpSI.getSessionID() +" length: "+tmpSI.getSessionID().length());
-            
-            if(tmpSI.getSessionID() == null || tmpSI.getSessionID().length() == 0 || tmpSI.getSessionID().length() == 2){                
+
+            if(tmpSI.getSessionID() == null || tmpSI.getSessionID().length() == 0 || tmpSI.getSessionID().length() == 2){
                 throw new AuthenticationFailedException("SessionID is null or equals  \"\"");
             }
             return tmpSI;
@@ -339,11 +410,11 @@ public class WSSAccessorDeegree implements WSSAccessor {
             throw new AuthenticationFailedException(ioex);
         }
     }
-    
+
 
     /**
      * Closes the WSS session
-     * 
+     *
      * @throws ServiceException Is thrown, when closeSession() fails on the WSS
      */
     public void closeSession() throws ServiceException {
@@ -380,10 +451,10 @@ public class WSSAccessorDeegree implements WSSAccessor {
         logger.debug("closeSession() called successfully");
 
     }
-    
-     /**
+
+    /**
      * Closes the WSS session
-     * 
+     *
      * @throws ServiceException Is thrown, when closeSession() fails on the WSS
      */
     public void closeSession(SessionInformation si) throws ServiceException {
@@ -423,7 +494,7 @@ public class WSSAccessorDeegree implements WSSAccessor {
 
     /**
      * Returns the URL to the used WSS.
-     * 
+     *
      * @return URL as String
      */
     public String getWSS() {
@@ -441,12 +512,18 @@ public class WSSAccessorDeegree implements WSSAccessor {
 
     /**
      * Sets a proxy for indirect HTTP communication
-     * 
+     *
      * @param proxy_url URL of the proxy to use.
      * @param port The port of the proxy server.
      */
     public void setProxy(String proxy_url, int port) {
-        client.getHostConfiguration().setProxy(proxy_url, port);
+        if (proxy_url == null) {
+            logger.debug("make new httpclient without proxy");
+            client = new HttpClient(new MultiThreadedHttpConnectionManager());
+        } else {
+            logger.debug("set accessor proxy: " + proxy_url + ":" + port);
+            client.getHostConfiguration().setProxy(proxy_url, port);
+        }
     }
 
     public void setCredentialProvider(CredentialsProvider credentialProvider) {
@@ -460,7 +537,7 @@ public class WSSAccessorDeegree implements WSSAccessor {
 
     /**
      * Sets the URL of WSS to use
-     * 
+     *
      * @param wss_url URL of an WSS
      */
     public void setWSS(String wssUrl) {
@@ -487,7 +564,7 @@ public class WSSAccessorDeegree implements WSSAccessor {
 
     /**
      * Sets the authentication method for WSS interaction
-     * 
+     *
      * @param authnMethod The authentication method that shall be used.
      */
     public void setAuthenticationMethod(AuthenticationMethod authnMethod) {
@@ -495,10 +572,10 @@ public class WSSAccessorDeegree implements WSSAccessor {
     }
 
     /**
-     * Retrieves the capabilities document of a WSS, parses it and returns 
-     * the supported auhtentication methods. If the WSS does not respond, 
+     * Retrieves the capabilities document of a WSS, parses it and returns
+     * the supported auhtentication methods. If the WSS does not respond,
      * the method returns an empty List.
-     * 
+     *
      * @return a List with the IDs of all supported auhtentication methods
      */
     public List<String> getSupportedAuthenticationMethods() {
@@ -514,7 +591,7 @@ public class WSSAccessorDeegree implements WSSAccessor {
         if (capabilities == null) {
             return authMethodsList;
         }
-        //Problem Arndt 
+        //Problem Arndt
         ListIterator<Element> it = capabilities.selectNodes("//authn:SupportedAuthenticationMethod").listIterator();
 
         while (it.hasNext()) {
@@ -528,8 +605,8 @@ public class WSSAccessorDeegree implements WSSAccessor {
 
     /**
      * Tries to retrieve the capabillities document from the specific WSS
-     * 
-     * @return the capabillities document as Dom4J Document, or in case of an 
+     *
+     * @return the capabillities document as Dom4J Document, or in case of an
      *      error <code>null</code>
      */
     public Document getWSSCapabilities() {
@@ -580,8 +657,8 @@ public class WSSAccessorDeegree implements WSSAccessor {
 
     /**
      * Tries to create a Dom4J Document from a InputStream
-     * 
-     * @param is 
+     *
+     * @param is
      * @return a XML Document
      * @throws org.dom4j.DocumentException when parsing went wrong
      */
@@ -593,7 +670,7 @@ public class WSSAccessorDeegree implements WSSAccessor {
 
     /**
      * Merges two arrays into a new one
-     * 
+     *
      * @param arrayA The first array.
      * @param arrayB The Second array
      * @return a new Array
