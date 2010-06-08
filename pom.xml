@@ -18,9 +18,9 @@
     <description>!!! description pending !!!</description>
 
     <scm>
-        <connection>scm:svn:svn+ssh://repositories/svn/repositories/central/de/cismet/commons/wss-beans/trunk</connection>
-        <developerConnection>scm:svn:svn+ssh://repositories/svn/repositories/central/de/cismet/commons/wss-beans/trunk</developerConnection>
-        <url>http://repositories:8082/central/browse/de/cismet/commons/wss-beans/trunk</url>
+        <connection>scm:svn:svn+ssh://repositories/svn/repositories/central/de/cismet/commons/wss-bean/trunk</connection>
+        <developerConnection>scm:svn:svn+ssh://repositories/svn/repositories/central/de/cismet/commons/wss-bean/trunk</developerConnection>
+        <url>http://repositories:8082/central/browse/de/cismet/commons/wss-bean/trunk</url>
     </scm>
 
     <dependencies>
