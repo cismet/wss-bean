@@ -6,7 +6,7 @@
     <parent>
         <groupId>de.cismet.cids</groupId>
         <artifactId>cids-parent</artifactId>
-        <version>1.0-SNAPSHOT</version>
+        <version>1.0</version>
     </parent>
 
     <groupId>de.cismet.commons</groupId>
@@ -16,6 +16,12 @@
 
     <name>WSS Bean</name>
     <description>!!! description pending !!!</description>
+
+    <scm>
+        <connection>scm:svn:svn+ssh://repositories/svn/repositories/central/de/cismet/commons/wss-beans/trunk</connection>
+        <developerConnection>scm:svn:svn+ssh://repositories/svn/repositories/central/de/cismet/commons/wss-beans/trunk</developerConnection>
+        <url>http://repositories:8082/central/browse/de/cismet/commons/wss-beans/trunk</url>
+    </scm>
 
     <dependencies>
         <dependency>
