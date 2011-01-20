@@ -1,34 +1,44 @@
+/***************************************************
+*
+* cismet GmbH, Saarbruecken, Germany
+*
+*              ... and it just works.
+*
+****************************************************/
 package net.environmatics.acs.exceptions;
 
 /**
- * Exception, that is thrown when an error occured while
- * performing a getSession() Operation.
- * 
- * @author abonitz
+ * Exception, that is thrown when an error occured while performing a getSession() Operation.
+ *
+ * @author   abonitz
+ * @version  $Revision$, $Date$
  */
 public class AuthenticationFailedException extends Exception {
 
-    /**
-     * Creates a new AuthenticationFailedException
-     * @param exception that causes the AuthenticationFailedException
-     */
-    public AuthenticationFailedException(Exception exception) {
-        super(exception);
-    }
+    //~ Constructors -----------------------------------------------------------
 
     /**
-     * Creates a new AuthenticationFailedException
-     * @param message an error message
-     */
-    public AuthenticationFailedException(String message) {
-        super(message);
-    }
-    
-    /**
-     * Creates a new AuthenticationFailedException
+     * Creates a new AuthenticationFailedException.
      */
     public AuthenticationFailedException() {
         this("Authentication failed!");
     }
 
+    /**
+     * Creates a new AuthenticationFailedException.
+     *
+     * @param  exception  that causes the AuthenticationFailedException
+     */
+    public AuthenticationFailedException(final Exception exception) {
+        super(exception);
+    }
+
+    /**
+     * Creates a new AuthenticationFailedException.
+     *
+     * @param  message  an error message
+     */
+    public AuthenticationFailedException(final String message) {
+        super(message);
+    }
 }

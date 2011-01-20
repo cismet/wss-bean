@@ -1,3 +1,10 @@
+/***************************************************
+*
+* cismet GmbH, Saarbruecken, Germany
+*
+*              ... and it just works.
+*
+****************************************************/
 /*
  * ====================================================================
  *
@@ -23,8 +30,10 @@
  * <http://www.apache.org/>.
  *
  */
-
 package org.apache.commons.httpclient.contrib.ssl;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -32,82 +41,92 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
-import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
-import org.apache.commons.logging.Log; 
-import org.apache.commons.logging.LogFactory;
 
 /**
- * <p>
- * EasyX509TrustManager unlike default {@link X509TrustManager} accepts 
- * self-signed certificates. 
- * </p>
- * <p>
- * This trust manager SHOULD NOT be used for productive systems 
- * due to security reasons, unless it is a concious decision and 
- * you are perfectly aware of security implications of accepting 
- * self-signed certificates
- * </p>
- * 
- * @author <a href="mailto:adrian.sutton@ephox.com">Adrian Sutton</a>
- * @author <a href="mailto:oleg@ural.ru">Oleg Kalnichevski</a>
- * 
- * <p>
- * DISCLAIMER: HttpClient developers DO NOT actively support this component.
- * The component is provided as a reference material, which may be inappropriate
- * for use without additional customization.
- * </p>
+ * <p>EasyX509TrustManager unlike default {@link X509TrustManager} accepts self-signed certificates.</p>
+ *
+ * <p>This trust manager SHOULD NOT be used for productive systems due to security reasons, unless it is a concious
+ * decision and you are perfectly aware of security implications of accepting self-signed certificates</p>
+ *
+ * @author   <a href="mailto:adrian.sutton@ephox.com">Adrian Sutton</a>
+ * @author   <a href="mailto:oleg@ural.ru">Oleg Kalnichevski</a>
+ *
+ *           <p>DISCLAIMER: HttpClient developers DO NOT actively support this component. The component is provided as a
+ *           reference material, which may be inappropriate for use without additional customization.</p>
+ * @version  $Revision$, $Date$
  */
 
-public class EasyX509TrustManager implements X509TrustManager
-{
-    private X509TrustManager standardTrustManager = null;
+public class EasyX509TrustManager implements X509TrustManager {
+
+    //~ Static fields/initializers ---------------------------------------------
 
     /** Log object for this class. */
     private static final Log LOG = LogFactory.getLog(EasyX509TrustManager.class);
 
+    //~ Instance fields --------------------------------------------------------
+
+    private X509TrustManager standardTrustManager = null;
+
+    //~ Constructors -----------------------------------------------------------
+
     /**
      * Constructor for EasyX509TrustManager.
+     *
+     * @param   keystore  DOCUMENT ME!
+     *
+     * @throws  NoSuchAlgorithmException  DOCUMENT ME!
+     * @throws  KeyStoreException         DOCUMENT ME!
      */
-    public EasyX509TrustManager(KeyStore keystore) throws NoSuchAlgorithmException, KeyStoreException {
+    public EasyX509TrustManager(final KeyStore keystore) throws NoSuchAlgorithmException, KeyStoreException {
         super();
-        TrustManagerFactory factory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        final TrustManagerFactory factory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
         factory.init(keystore);
-        TrustManager[] trustmanagers = factory.getTrustManagers();
+        final TrustManager[] trustmanagers = factory.getTrustManagers();
         if (trustmanagers.length == 0) {
             throw new NoSuchAlgorithmException("no trust manager found");
         }
         this.standardTrustManager = (X509TrustManager)trustmanagers[0];
     }
 
+    //~ Methods ----------------------------------------------------------------
+
     /**
-     * @see javax.net.ssl.X509TrustManager#checkClientTrusted(X509Certificate[],String authType)
+     * @see  javax.net.ssl.X509TrustManager#checkClientTrusted(X509Certificate[],String authType)
      */
-    public void checkClientTrusted(X509Certificate[] certificates,String authType) throws CertificateException {
-        standardTrustManager.checkClientTrusted(certificates,authType);
+    @Override
+    public void checkClientTrusted(final X509Certificate[] certificates, final String authType)
+            throws CertificateException {
+        standardTrustManager.checkClientTrusted(certificates, authType);
     }
 
     /**
-     * @see javax.net.ssl.X509TrustManager#checkServerTrusted(X509Certificate[],String authType)
+     * @see  javax.net.ssl.X509TrustManager#checkServerTrusted(X509Certificate[],String authType)
      */
-    public void checkServerTrusted(X509Certificate[] certificates,String authType) throws CertificateException {
+    @Override
+    public void checkServerTrusted(final X509Certificate[] certificates, final String authType)
+            throws CertificateException {
         if ((certificates != null) && LOG.isDebugEnabled()) {
             LOG.debug("Server certificate chain:");
             for (int i = 0; i < certificates.length; i++) {
-                LOG.debug("X509Certificate[" + i + "]=" + certificates[i]);
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("X509Certificate[" + i + "]=" + certificates[i]);
+                }
             }
         }
         if ((certificates != null) && (certificates.length == 1)) {
             certificates[0].checkValidity();
         } else {
-            standardTrustManager.checkServerTrusted(certificates,authType);
+            standardTrustManager.checkServerTrusted(certificates, authType);
         }
     }
 
     /**
-     * @see javax.net.ssl.X509TrustManager#getAcceptedIssuers()
+     * @see  javax.net.ssl.X509TrustManager#getAcceptedIssuers()
      */
+    @Override
     public X509Certificate[] getAcceptedIssuers() {
         return this.standardTrustManager.getAcceptedIssuers();
     }
