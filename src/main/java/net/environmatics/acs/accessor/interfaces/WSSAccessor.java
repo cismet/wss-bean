@@ -30,7 +30,7 @@ import java.util.List;
  */
 public interface WSSAccessor {
 
-    //~ Static fields/initializers ---------------------------------------------
+    //~ Instance fields --------------------------------------------------------
 
     /** DCP Method: GET */
     String DCP_HTTP_GET = "HTTP_GET";
