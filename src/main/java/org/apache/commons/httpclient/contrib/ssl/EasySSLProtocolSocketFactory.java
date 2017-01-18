@@ -171,7 +171,7 @@ public class EasySSLProtocolSocketFactory implements SecureProtocolSocketFactory
      * @param   port          the port on the host
      * @param   localAddress  clientHost the local host name/IP to bind the socket to
      * @param   localPort     clientPort the port on the local machine
-     * @param   params {@link HttpConnectionParams Http connection parameters}
+     * @param   params        {@link HttpConnectionParams Http connection parameters}
      *
      * @return  Socket a new socket
      *
