@@ -67,16 +67,23 @@
             <groupId>commons-httpclient</groupId>
             <artifactId>commons-httpclient</artifactId>
         </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+        </dependency>
         <!-- END: managed dependencies -->
         <dependency>
             <groupId>dom4j</groupId>
             <artifactId>dom4j</artifactId>
             <version>1.6.1</version>
-        </dependency>
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>1.4</version>
+            <!--
+            <exclusions>
+                <exclusion>
+                    <groupId>xml-apis</groupId>
+                    <artifactId>xml-apis</artifactId>
+                </exclusion>
+            </exclusions>
+            -->
         </dependency>
     </dependencies>
 
