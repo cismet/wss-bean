@@ -13,7 +13,7 @@
 
     <groupId>de.cismet.commons</groupId>
     <artifactId>wss-bean</artifactId>
-    <version>5.0-SNAPSHOT</version>
+    <version>5.0</version>
     <packaging>jar</packaging>
 
     <name>WSS Bean</name>
@@ -23,7 +23,7 @@
         <connection>https://github.com/cismet/wss-bean.git</connection>
         <developerConnection>scm:git:git@github.com:cismet/wss-bean.git</developerConnection>
         <url>https://github.com/cismet/wss-bean</url>
-        <tag>HEAD</tag>
+        <tag>v5.0</tag>
     </scm>
 
     <ciManagement>
