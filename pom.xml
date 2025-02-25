@@ -13,7 +13,7 @@
 
     <groupId>de.cismet.commons</groupId>
     <artifactId>wss-bean</artifactId>
-    <version>7.1-SNAPSHOT</version>
+    <version>9.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>WSS Bean</name>
