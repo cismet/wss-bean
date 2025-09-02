@@ -32,6 +32,7 @@ import org.apache.log4j.Logger;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
+import org.dom4j.Node;
 import org.dom4j.io.SAXReader;
 
 import java.io.IOException;
@@ -693,11 +694,10 @@ public class WSSAccessorDeegree implements WSSAccessor {
             return authMethodsList;
         }
         // Problem Arndt
-        final ListIterator<Element> it = capabilities.selectNodes("//authn:SupportedAuthenticationMethod")
-                    .listIterator();
+        final ListIterator<Node> it = capabilities.selectNodes("//authn:SupportedAuthenticationMethod").listIterator();
 
         while (it.hasNext()) {
-            final Element e = it.next();
+            final Node e = it.next();
             authMethodsList.add(e.valueOf("//authn:AuthenticationMethod/@id"));
             e.detach();
         }
